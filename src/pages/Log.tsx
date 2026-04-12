@@ -545,7 +545,7 @@ function MealForm({ onClose }: { onClose: () => void }) {
               <label className="flex flex-col items-center justify-center w-full h-40 bg-surface border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-accent/30 transition-colors">
                 <HiOutlineFire size={32} className="text-text-muted mb-2" />
                 <span className="label-caps">TAP TO UPLOAD PHOTO</span>
-                <input type="file" accept="image/*" capture="environment" onChange={handleFile} className="hidden" />
+                <input type="file" accept="image/*" onChange={handleFile} className="hidden" />
               </label>
             ) : (
               <div className="relative">

@@ -291,7 +291,7 @@ export default function Meals() {
           <HiOutlinePlus size={24} className="text-bg" />
         )}
       </motion.button>
-      <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={handleUpload} className="hidden" />
+      <input ref={fileRef} type="file" accept="image/*" onChange={handleUpload} className="hidden" />
     </PageTransition>
   );
 }
