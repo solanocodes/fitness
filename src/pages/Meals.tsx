@@ -89,18 +89,55 @@ function MealCard({ meal, index }: { meal: any; index: number }) {
   );
 }
 
+function SavedMealCard({ meal, onQuickLog }: { meal: any; onQuickLog: (meal: any) => void }) {
+  return (
+    <motion.button
+      onClick={() => onQuickLog(meal)}
+      className="flex-shrink-0 bg-card border border-border rounded-xl px-4 py-3 min-w-[140px] text-left hover:border-accent/30 transition-colors"
+      whileTap={{ scale: 0.95 }}
+      whileHover={{ boxShadow: '0 0 15px rgba(200,241,53,0.08)' }}
+    >
+      <div className="font-bebas text-base text-text-primary leading-tight">{meal.meal_name}</div>
+      <div className="flex gap-2 mt-1.5">
+        <span className="text-accent" style={{ fontSize: '10px', fontFamily: '"DM Sans"', fontWeight: 600 }}>{Math.round(parseFloat(meal.protein))}P</span>
+        <span className="text-blue-400" style={{ fontSize: '10px', fontFamily: '"DM Sans"', fontWeight: 600 }}>{Math.round(parseFloat(meal.carbs))}C</span>
+        <span className="text-amber-400" style={{ fontSize: '10px', fontFamily: '"DM Sans"', fontWeight: 600 }}>{Math.round(parseFloat(meal.fat))}F</span>
+      </div>
+      <div className="font-bebas text-sm text-text-muted mt-0.5">{meal.calories} cal</div>
+    </motion.button>
+  );
+}
+
 export default function Meals() {
   const today = new Date().toISOString().split('T')[0];
   const { data: meals, refetch } = useApi(() => api.getMeals(today), []);
+  const { data: savedMeals } = useApi(() => api.getSavedMeals(), []);
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+
+  const savedList = Array.isArray(savedMeals) ? savedMeals : [];
+
+  const quickLogSaved = async (meal: any) => {
+    try {
+      const fd = new FormData();
+      fd.append('meal_name', meal.meal_name);
+      fd.append('protein', String(meal.protein));
+      fd.append('carbs', String(meal.carbs));
+      fd.append('fat', String(meal.fat));
+      fd.append('calories', String(meal.calories));
+      fd.append('confidence', 'saved');
+      await api.addMeal(fd);
+      refetch();
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
     try {
-      // First analyze
       const analyzeForm = new FormData();
       analyzeForm.append('photo', file);
       let analysis: any = {};
@@ -110,7 +147,6 @@ export default function Meals() {
         // AI analysis failed, save without macros
       }
 
-      // Then save
       const fd = new FormData();
       fd.append('photo', file);
       fd.append('meal_name', analysis.meal_name || 'Meal');
@@ -148,6 +184,23 @@ export default function Meals() {
         >
           Today's nutrition breakdown
         </motion.p>
+
+        {/* Saved Meals quick-tap row */}
+        {savedList.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.15 }}
+            className="mb-4"
+          >
+            <span className="label-caps block mb-2">FAVORITES — TAP TO LOG</span>
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {savedList.map((m: any) => (
+                <SavedMealCard key={m.id} meal={m} onQuickLog={quickLogSaved} />
+              ))}
+            </div>
+          </motion.div>
+        )}
 
         {mealsList.length > 0 && <MacroSummaryBar meals={mealsList} />}
 

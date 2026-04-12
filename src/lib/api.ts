@@ -67,4 +67,21 @@ export const api = {
   // Analyze Meal
   analyzeMeal: (formData: FormData) =>
     request('/api/analyze-meal', { method: 'POST', body: formData }),
+  analyzeMealText: (description: string) =>
+    request('/api/analyze-meal-text', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ description }),
+    }),
+
+  // Saved Meals
+  getSavedMeals: () => request('/api/saved-meals'),
+  addSavedMeal: (data: any) =>
+    request('/api/saved-meals', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }),
+  deleteSavedMeal: (id: number) =>
+    request(`/api/saved-meals/${id}`, { method: 'DELETE' }),
 };

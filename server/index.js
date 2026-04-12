@@ -32,6 +32,7 @@ async function initDB() {
     CREATE TABLE IF NOT EXISTS daily_log (id SERIAL PRIMARY KEY, date DATE DEFAULT CURRENT_DATE, water_oz INTEGER DEFAULT 0, bloat_score INTEGER, notes TEXT, created_at TIMESTAMPTZ DEFAULT NOW());
     CREATE TABLE IF NOT EXISTS achievements (id SERIAL PRIMARY KEY, key TEXT UNIQUE, name TEXT, description TEXT, earned_at TIMESTAMPTZ DEFAULT NOW());
     CREATE TABLE IF NOT EXISTS forge_score_snapshots (id SERIAL PRIMARY KEY, score NUMERIC(5,1), bf_score NUMERIC(5,1), weight_score NUMERIC(5,1), consistency_score NUMERIC(5,1), workout_score NUMERIC(5,1), created_at TIMESTAMPTZ DEFAULT NOW());
+    CREATE TABLE IF NOT EXISTS saved_meals (id SERIAL PRIMARY KEY, meal_name TEXT NOT NULL, protein NUMERIC(5,1), carbs NUMERIC(5,1), fat NUMERIC(5,1), calories INTEGER, created_at TIMESTAMPTZ DEFAULT NOW());
   `;
   try {
     await pool.query(schema);
@@ -301,6 +302,76 @@ app.post('/api/analyze-meal', upload.single('photo'), async (req, res) => {
 
     const text = response.content[0].text.trim();
     // Extract JSON from response
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      res.json(parsed);
+    } else {
+      res.status(500).json({ error: 'Could not parse AI response' });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Saved Meals
+app.get('/api/saved-meals', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM saved_meals ORDER BY created_at DESC LIMIT 50');
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/saved-meals', async (req, res) => {
+  try {
+    const { meal_name, protein, carbs, fat, calories } = req.body;
+    const result = await pool.query(
+      'INSERT INTO saved_meals (meal_name, protein, carbs, fat, calories) VALUES ($1,$2,$3,$4,$5) RETURNING *',
+      [meal_name, protein, carbs, fat, calories]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/saved-meals/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM saved_meals WHERE id = $1', [req.params.id]);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Text-based meal analysis with Claude Haiku
+app.post('/api/analyze-meal-text', async (req, res) => {
+  try {
+    const { description } = req.body;
+    if (!description) {
+      return res.status(400).json({ error: 'No description provided' });
+    }
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
+    }
+
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+    const response = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 300,
+      messages: [
+        {
+          role: 'user',
+          content: `Analyze this meal description and return ONLY a JSON object: { "meal_name": "string", "protein_g": number, "carbs_g": number, "fat_g": number, "calories": number, "confidence": "low"|"medium"|"high" }. No other text.\n\nMeal: ${description}`,
+        },
+      ],
+      system: 'You are a nutrition expert. Analyze meal descriptions and return precise macro estimates based on typical serving sizes.',
+    });
+
+    const text = response.content[0].text.trim();
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);

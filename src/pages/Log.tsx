@@ -218,14 +218,92 @@ function WorkoutForm({ onClose }: { onClose: () => void }) {
   );
 }
 
+type MealTab = 'text' | 'manual' | 'photo';
+
+function AnalysisResult({ analysis }: { analysis: any }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-surface border border-accent/20 rounded-xl p-4 space-y-2"
+    >
+      <div className="flex justify-between items-baseline">
+        <span className="font-bebas text-xl text-text-primary">{analysis.meal_name}</span>
+        <span className={`text-xs font-body px-2 py-0.5 rounded-full ${
+          analysis.confidence === 'high' ? 'bg-accent/20 text-accent' :
+          analysis.confidence === 'medium' ? 'bg-yellow-500/20 text-yellow-500' :
+          'bg-red-500/20 text-red-500'
+        }`}>
+          {analysis.confidence}
+        </span>
+      </div>
+      <div className="grid grid-cols-4 gap-2">
+        <div className="text-center">
+          <div className="font-bebas text-lg text-accent">{analysis.protein_g}g</div>
+          <div className="label-caps">PROTEIN</div>
+        </div>
+        <div className="text-center">
+          <div className="font-bebas text-lg text-blue-400">{analysis.carbs_g}g</div>
+          <div className="label-caps">CARBS</div>
+        </div>
+        <div className="text-center">
+          <div className="font-bebas text-lg text-amber-400">{analysis.fat_g}g</div>
+          <div className="label-caps">FAT</div>
+        </div>
+        <div className="text-center">
+          <div className="font-bebas text-lg text-text-primary">{analysis.calories}</div>
+          <div className="label-caps">CAL</div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 function MealForm({ onClose }: { onClose: () => void }) {
-  const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
-  const [notes, setNotes] = useState('');
-  const [analyzing, setAnalyzing] = useState(false);
-  const [analysis, setAnalysis] = useState<any>(null);
+  const [tab, setTab] = useState<MealTab>('text');
+
+  // Shared state
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [showSaveFav, setShowSaveFav] = useState(false);
+  const [lastMeal, setLastMeal] = useState<any>(null);
+
+  // Quick Text state
+  const [textInput, setTextInput] = useState('');
+  const [textAnalyzing, setTextAnalyzing] = useState(false);
+  const [textAnalysis, setTextAnalysis] = useState<any>(null);
+
+  // Manual Entry state
+  const [manualName, setManualName] = useState('');
+  const [manualProtein, setManualProtein] = useState('');
+  const [manualCarbs, setManualCarbs] = useState('');
+  const [manualFat, setManualFat] = useState('');
+  const [manualCalories, setManualCalories] = useState('');
+
+  // Photo state
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [photoAnalyzing, setPhotoAnalyzing] = useState(false);
+  const [photoAnalysis, setPhotoAnalysis] = useState<any>(null);
+
+  const tabs: { key: MealTab; label: string }[] = [
+    { key: 'text', label: 'QUICK TEXT' },
+    { key: 'manual', label: 'MANUAL' },
+    { key: 'photo', label: 'PHOTO' },
+  ];
+
+  const analyzeText = async () => {
+    if (!textInput.trim()) return;
+    setTextAnalyzing(true);
+    try {
+      const result = await api.analyzeMealText(textInput);
+      setTextAnalysis(result);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setTextAnalyzing(false);
+    }
+  };
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -235,40 +313,124 @@ function MealForm({ onClose }: { onClose: () => void }) {
     }
   };
 
-  const analyze = async () => {
+  const analyzePhoto = async () => {
     if (!file) return;
-    setAnalyzing(true);
+    setPhotoAnalyzing(true);
     try {
       const fd = new FormData();
       fd.append('photo', file);
       const result = await api.analyzeMeal(fd);
-      setAnalysis(result);
+      setPhotoAnalysis(result);
     } catch (err) {
       console.error(err);
     } finally {
-      setAnalyzing(false);
+      setPhotoAnalyzing(false);
     }
   };
 
-  const submit = async () => {
+  const saveMeal = async (mealData: { meal_name: string; protein: number; carbs: number; fat: number; calories: number; confidence: string; photo?: File }) => {
     setSaving(true);
     try {
       const fd = new FormData();
-      if (file) fd.append('photo', file);
-      fd.append('meal_name', analysis?.meal_name || 'Meal');
-      fd.append('protein', String(analysis?.protein_g || 0));
-      fd.append('carbs', String(analysis?.carbs_g || 0));
-      fd.append('fat', String(analysis?.fat_g || 0));
-      fd.append('calories', String(analysis?.calories || 0));
-      fd.append('confidence', analysis?.confidence || 'medium');
-      fd.append('notes', notes);
+      if (mealData.photo) fd.append('photo', mealData.photo);
+      fd.append('meal_name', mealData.meal_name);
+      fd.append('protein', String(mealData.protein));
+      fd.append('carbs', String(mealData.carbs));
+      fd.append('fat', String(mealData.fat));
+      fd.append('calories', String(mealData.calories));
+      fd.append('confidence', mealData.confidence);
       await api.addMeal(fd);
+      setLastMeal(mealData);
       setSuccess(true);
-      setTimeout(onClose, 800);
+      setShowSaveFav(true);
     } catch {
       setSaving(false);
     }
   };
+
+  const submitText = () => {
+    if (!textAnalysis) return;
+    saveMeal({
+      meal_name: textAnalysis.meal_name,
+      protein: textAnalysis.protein_g,
+      carbs: textAnalysis.carbs_g,
+      fat: textAnalysis.fat_g,
+      calories: textAnalysis.calories,
+      confidence: textAnalysis.confidence,
+    });
+  };
+
+  const submitManual = () => {
+    if (!manualName || !manualCalories) return;
+    saveMeal({
+      meal_name: manualName,
+      protein: parseFloat(manualProtein) || 0,
+      carbs: parseFloat(manualCarbs) || 0,
+      fat: parseFloat(manualFat) || 0,
+      calories: parseInt(manualCalories) || 0,
+      confidence: 'manual',
+    });
+  };
+
+  const submitPhoto = () => {
+    if (!photoAnalysis) return;
+    saveMeal({
+      meal_name: photoAnalysis.meal_name,
+      protein: photoAnalysis.protein_g,
+      carbs: photoAnalysis.carbs_g,
+      fat: photoAnalysis.fat_g,
+      calories: photoAnalysis.calories,
+      confidence: photoAnalysis.confidence,
+      photo: file || undefined,
+    });
+  };
+
+  const saveAsFavorite = async () => {
+    if (!lastMeal) return;
+    try {
+      await api.addSavedMeal({
+        meal_name: lastMeal.meal_name,
+        protein: lastMeal.protein,
+        carbs: lastMeal.carbs,
+        fat: lastMeal.fat,
+        calories: lastMeal.calories,
+      });
+    } catch (err) {
+      console.error(err);
+    }
+    onClose();
+  };
+
+  if (showSaveFav) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="space-y-4"
+      >
+        <h3 className="font-bebas text-3xl text-accent">MEAL LOGGED!</h3>
+        <p className="text-text-muted font-body text-sm">
+          {lastMeal?.meal_name} — {lastMeal?.calories} cal
+        </p>
+        <div className="flex gap-3">
+          <motion.button
+            onClick={onClose}
+            whileTap={{ scale: 0.97 }}
+            className="flex-1 bg-surface border border-border rounded-lg py-3 text-text-muted font-body text-sm"
+          >
+            Done
+          </motion.button>
+          <motion.button
+            onClick={saveAsFavorite}
+            whileTap={{ scale: 0.97 }}
+            className="flex-1 bg-accent rounded-lg py-3 text-bg font-body text-sm font-semibold"
+          >
+            Save as Favorite
+          </motion.button>
+        </div>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div
@@ -279,93 +441,134 @@ function MealForm({ onClose }: { onClose: () => void }) {
     >
       <h3 className="font-bebas text-3xl text-text-primary">LOG MEAL</h3>
 
-      {!preview ? (
-        <label className="flex flex-col items-center justify-center w-full h-40 bg-surface border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-accent/30 transition-colors">
-          <HiOutlineFire size={32} className="text-text-muted mb-2" />
-          <span className="label-caps">TAP TO UPLOAD PHOTO</span>
-          <input type="file" accept="image/*" capture="environment" onChange={handleFile} className="hidden" />
-        </label>
-      ) : (
-        <div className="relative">
-          <img src={preview} alt="Meal" className="w-full h-40 object-cover rounded-xl" />
-          {!analysis && (
-            <motion.button
-              onClick={analyze}
-              whileTap={{ scale: 0.97 }}
-              disabled={analyzing}
-              className="absolute bottom-3 right-3 bg-accent text-bg px-4 py-2 rounded-lg text-xs font-semibold"
-            >
-              {analyzing ? 'Analyzing...' : 'AI Analyze'}
-            </motion.button>
-          )}
-        </div>
-      )}
-
-      {analysis && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-surface border border-accent/20 rounded-xl p-4 space-y-2"
-        >
-          <div className="flex justify-between items-baseline">
-            <span className="font-bebas text-xl text-text-primary">{analysis.meal_name}</span>
-            <span className={`text-xs font-body px-2 py-0.5 rounded-full ${
-              analysis.confidence === 'high' ? 'bg-accent/20 text-accent' :
-              analysis.confidence === 'medium' ? 'bg-yellow-500/20 text-yellow-500' :
-              'bg-red-500/20 text-red-500'
-            }`}>
-              {analysis.confidence}
-            </span>
-          </div>
-          <div className="grid grid-cols-4 gap-2">
-            <div className="text-center">
-              <div className="font-bebas text-lg text-accent">{analysis.protein_g}g</div>
-              <div className="label-caps">PROTEIN</div>
-            </div>
-            <div className="text-center">
-              <div className="font-bebas text-lg text-blue-400">{analysis.carbs_g}g</div>
-              <div className="label-caps">CARBS</div>
-            </div>
-            <div className="text-center">
-              <div className="font-bebas text-lg text-amber-400">{analysis.fat_g}g</div>
-              <div className="label-caps">FAT</div>
-            </div>
-            <div className="text-center">
-              <div className="font-bebas text-lg text-text-primary">{analysis.calories}</div>
-              <div className="label-caps">CAL</div>
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-      <div>
-        <label className="label-caps block mb-2">NOTES</label>
-        <input
-          type="text"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          className="w-full bg-surface border border-border rounded-lg px-4 py-3 text-text-primary font-body text-sm focus:border-accent focus:outline-none"
-          placeholder="Post-workout meal..."
-        />
+      {/* Tab switcher */}
+      <div className="flex bg-surface rounded-lg p-1 gap-1">
+        {tabs.map((t) => (
+          <motion.button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            whileTap={{ scale: 0.97 }}
+            className={`flex-1 py-2 rounded-md text-center transition-colors ${
+              tab === t.key
+                ? 'bg-accent text-bg font-semibold'
+                : 'text-text-muted hover:text-text-primary'
+            }`}
+            style={{ fontFamily: '"DM Sans", sans-serif', fontSize: '9px', fontWeight: 600, letterSpacing: '2px' }}
+          >
+            {t.label}
+          </motion.button>
+        ))}
       </div>
 
-      <div className="flex gap-3">
-        <motion.button
-          onClick={onClose}
-          whileTap={{ scale: 0.97 }}
-          className="flex-1 bg-surface border border-border rounded-lg py-3 text-text-muted font-body text-sm"
-        >
-          Cancel
-        </motion.button>
-        <motion.button
-          onClick={submit}
-          whileTap={{ scale: 0.97 }}
-          disabled={saving || (!analysis && !file)}
-          className="flex-1 bg-accent rounded-lg py-3 text-bg font-body text-sm font-semibold disabled:opacity-50"
-        >
-          {success ? 'Saved!' : saving ? 'Saving...' : 'Save Meal'}
-        </motion.button>
-      </div>
+      {/* Tab content */}
+      <AnimatePresence mode="wait">
+        {tab === 'text' && (
+          <motion.div key="text-tab" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-3">
+            <div>
+              <label className="label-caps block mb-2">DESCRIBE YOUR MEAL</label>
+              <textarea
+                value={textInput}
+                onChange={(e) => setTextInput(e.target.value)}
+                className="w-full bg-surface border border-border rounded-lg px-4 py-3 text-text-primary font-body text-sm focus:border-accent focus:outline-none resize-none"
+                rows={3}
+                placeholder="e.g. Grilled chicken breast with rice and steamed broccoli"
+              />
+            </div>
+            {!textAnalysis && (
+              <motion.button
+                onClick={analyzeText}
+                whileTap={{ scale: 0.97 }}
+                disabled={textAnalyzing || !textInput.trim()}
+                className="w-full bg-accent rounded-lg py-3 text-bg font-body text-sm font-semibold disabled:opacity-50"
+              >
+                {textAnalyzing ? 'Estimating Macros...' : 'Estimate Macros'}
+              </motion.button>
+            )}
+            {textAnalysis && <AnalysisResult analysis={textAnalysis} />}
+            {textAnalysis && (
+              <div className="flex gap-3">
+                <motion.button onClick={onClose} whileTap={{ scale: 0.97 }} className="flex-1 bg-surface border border-border rounded-lg py-3 text-text-muted font-body text-sm">Cancel</motion.button>
+                <motion.button onClick={submitText} whileTap={{ scale: 0.97 }} disabled={saving} className="flex-1 bg-accent rounded-lg py-3 text-bg font-body text-sm font-semibold disabled:opacity-50">
+                  {saving ? 'Saving...' : 'Log Meal'}
+                </motion.button>
+              </div>
+            )}
+            {!textAnalysis && (
+              <motion.button onClick={onClose} whileTap={{ scale: 0.97 }} className="w-full bg-surface border border-border rounded-lg py-3 text-text-muted font-body text-sm">Cancel</motion.button>
+            )}
+          </motion.div>
+        )}
+
+        {tab === 'manual' && (
+          <motion.div key="manual-tab" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-3">
+            <div>
+              <label className="label-caps block mb-2">MEAL NAME</label>
+              <input type="text" value={manualName} onChange={(e) => setManualName(e.target.value)}
+                className="w-full bg-surface border border-border rounded-lg px-4 py-3 text-text-primary font-body text-sm focus:border-accent focus:outline-none"
+                placeholder="Chicken & Rice" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="label-caps block mb-2">PROTEIN (G)</label>
+                <input type="number" value={manualProtein} onChange={(e) => setManualProtein(e.target.value)}
+                  className="w-full bg-surface border border-border rounded-lg px-4 py-3 text-text-primary font-bebas text-2xl focus:border-accent focus:outline-none" placeholder="40" />
+              </div>
+              <div>
+                <label className="label-caps block mb-2">CARBS (G)</label>
+                <input type="number" value={manualCarbs} onChange={(e) => setManualCarbs(e.target.value)}
+                  className="w-full bg-surface border border-border rounded-lg px-4 py-3 text-text-primary font-bebas text-2xl focus:border-accent focus:outline-none" placeholder="55" />
+              </div>
+              <div>
+                <label className="label-caps block mb-2">FAT (G)</label>
+                <input type="number" value={manualFat} onChange={(e) => setManualFat(e.target.value)}
+                  className="w-full bg-surface border border-border rounded-lg px-4 py-3 text-text-primary font-bebas text-2xl focus:border-accent focus:outline-none" placeholder="12" />
+              </div>
+              <div>
+                <label className="label-caps block mb-2">CALORIES</label>
+                <input type="number" value={manualCalories} onChange={(e) => setManualCalories(e.target.value)}
+                  className="w-full bg-surface border border-border rounded-lg px-4 py-3 text-text-primary font-bebas text-2xl focus:border-accent focus:outline-none" placeholder="490" />
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <motion.button onClick={onClose} whileTap={{ scale: 0.97 }} className="flex-1 bg-surface border border-border rounded-lg py-3 text-text-muted font-body text-sm">Cancel</motion.button>
+              <motion.button onClick={submitManual} whileTap={{ scale: 0.97 }} disabled={saving || !manualName || !manualCalories}
+                className="flex-1 bg-accent rounded-lg py-3 text-bg font-body text-sm font-semibold disabled:opacity-50">
+                {saving ? 'Saving...' : 'Log Meal'}
+              </motion.button>
+            </div>
+          </motion.div>
+        )}
+
+        {tab === 'photo' && (
+          <motion.div key="photo-tab" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-3">
+            {!preview ? (
+              <label className="flex flex-col items-center justify-center w-full h-40 bg-surface border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-accent/30 transition-colors">
+                <HiOutlineFire size={32} className="text-text-muted mb-2" />
+                <span className="label-caps">TAP TO UPLOAD PHOTO</span>
+                <input type="file" accept="image/*" capture="environment" onChange={handleFile} className="hidden" />
+              </label>
+            ) : (
+              <div className="relative">
+                <img src={preview} alt="Meal" className="w-full h-40 object-cover rounded-xl" />
+                {!photoAnalysis && (
+                  <motion.button onClick={analyzePhoto} whileTap={{ scale: 0.97 }} disabled={photoAnalyzing}
+                    className="absolute bottom-3 right-3 bg-accent text-bg px-4 py-2 rounded-lg text-xs font-semibold">
+                    {photoAnalyzing ? 'Analyzing...' : 'AI Analyze'}
+                  </motion.button>
+                )}
+              </div>
+            )}
+            {photoAnalysis && <AnalysisResult analysis={photoAnalysis} />}
+            <div className="flex gap-3">
+              <motion.button onClick={onClose} whileTap={{ scale: 0.97 }} className="flex-1 bg-surface border border-border rounded-lg py-3 text-text-muted font-body text-sm">Cancel</motion.button>
+              <motion.button onClick={submitPhoto} whileTap={{ scale: 0.97 }} disabled={saving || !photoAnalysis}
+                className="flex-1 bg-accent rounded-lg py-3 text-bg font-body text-sm font-semibold disabled:opacity-50">
+                {saving ? 'Saving...' : 'Log Meal'}
+              </motion.button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
