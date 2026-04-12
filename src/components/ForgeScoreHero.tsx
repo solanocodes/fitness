@@ -132,9 +132,9 @@ function CountUp({ target }: { target: number }) {
 
 export default function ForgeScoreHero({ score, bfScore, weightScore, consistencyScore, workoutScore }: Props) {
   return (
-    <div className="relative w-full overflow-hidden" style={{ height: 280 }}>
-      {/* 3D Background */}
-      <div className="absolute inset-0">
+    <div className="relative w-full">
+      {/* 3D Background — covers only the score area */}
+      <div className="absolute inset-0 h-[280px]">
         <Canvas camera={{ position: [0, 0, 5], fov: 50 }}>
           <ambientLight intensity={0.5} />
           <MorphingMesh />
@@ -142,18 +142,18 @@ export default function ForgeScoreHero({ score, bfScore, weightScore, consistenc
       </div>
 
       {/* Spotlight gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-bg/40 via-bg/60 to-bg pointer-events-none" />
+      <div className="absolute inset-0 h-[280px] bg-gradient-to-b from-bg/40 via-bg/60 to-bg pointer-events-none" />
 
       {/* Radial spotlight */}
       <div
-        className="absolute inset-0 pointer-events-none"
+        className="absolute inset-0 h-[280px] pointer-events-none"
         style={{
           background: 'radial-gradient(ellipse at 50% 40%, rgba(200,241,53,0.06) 0%, transparent 60%)',
         }}
       />
 
       {/* Score Content */}
-      <div className="relative z-10 flex flex-col items-center justify-center h-full">
+      <div className="relative z-10 flex flex-col items-center pt-6 pb-4">
         <motion.span
           className="label-caps-lg mb-2"
           initial={{ opacity: 0 }}
@@ -164,7 +164,7 @@ export default function ForgeScoreHero({ score, bfScore, weightScore, consistenc
           FORGE SCORE
         </motion.span>
 
-        <div className="relative flex items-center justify-center">
+        <div className="relative flex items-center justify-center" style={{ width: 220, height: 220 }}>
           <ScoreArc score={score} />
           <motion.span
             className="font-bebas text-accent text-glow-lime"
