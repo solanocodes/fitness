@@ -11,7 +11,7 @@ export default function App() {
   const location = useLocation();
 
   return (
-    <div className="min-h-screen bg-bg pb-24">
+    <div className="min-h-screen bg-bg" style={{ paddingBottom: 'calc(96px + env(safe-area-inset-bottom))' }}>
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
           <Route path="/" element={<Dashboard />} />
