@@ -21,6 +21,7 @@
 
   body {
     position: relative;
+    padding-bottom: env(safe-area-inset-bottom);
   }
 
   /* Grain texture overlay */
