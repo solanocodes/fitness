@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import PageTransition from '../components/PageTransition';
 import { api } from '../lib/api';
 import { useApi } from '../hooks/useApi';
-import { HiOutlinePlus } from 'react-icons/hi';
+import { HiOutlinePlus, HiOutlineTrash } from 'react-icons/hi';
 
 function MacroSummaryBar({ meals }: { meals: any[] }) {
   const totals = useMemo(() => {
@@ -46,7 +46,8 @@ function MacroSummaryBar({ meals }: { meals: any[] }) {
   );
 }
 
-function MealCard({ meal, index }: { meal: any; index: number }) {
+function MealCard({ meal, index, onDelete }: { meal: any; index: number; onDelete: (id: number) => void }) {
+  const [confirming, setConfirming] = useState(false);
   const time = new Date(meal.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   return (
@@ -54,8 +55,9 @@ function MealCard({ meal, index }: { meal: any; index: number }) {
       className="bg-card border border-border rounded-xl overflow-hidden"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, x: -100, height: 0, marginBottom: 0 }}
       transition={{ delay: 0.1 + index * 0.05 }}
-      whileTap={{ scale: 0.98 }}
+      layout
     >
       <div className="flex">
         {meal.photo_url && (
@@ -67,15 +69,24 @@ function MealCard({ meal, index }: { meal: any; index: number }) {
               <h3 className="font-bebas text-lg text-text-primary">{meal.meal_name || 'Meal'}</h3>
               <span className="text-text-muted text-xs font-body">{time}</span>
             </div>
-            {meal.confidence && (
-              <span className={`text-xs font-body px-2 py-0.5 rounded-full ${
-                meal.confidence === 'high' ? 'bg-accent/20 text-accent' :
-                meal.confidence === 'medium' ? 'bg-yellow-500/20 text-yellow-500' :
-                'bg-red-500/20 text-red-500'
-              }`}>
-                {meal.confidence}
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              {meal.confidence && (
+                <span className={`text-xs font-body px-2 py-0.5 rounded-full ${
+                  meal.confidence === 'high' ? 'bg-accent/20 text-accent' :
+                  meal.confidence === 'medium' ? 'bg-yellow-500/20 text-yellow-500' :
+                  'bg-red-500/20 text-red-500'
+                }`}>
+                  {meal.confidence}
+                </span>
+              )}
+              <motion.button
+                onClick={() => setConfirming(true)}
+                whileTap={{ scale: 0.9 }}
+                className="p-1 text-text-muted hover:text-red-400 transition-colors"
+              >
+                <HiOutlineTrash size={16} />
+              </motion.button>
+            </div>
           </div>
           <div className="flex gap-3 mt-2">
             <span className="text-xs font-body text-accent">{Math.round(parseFloat(meal.protein) || 0)}g P</span>
@@ -85,6 +96,33 @@ function MealCard({ meal, index }: { meal: any; index: number }) {
           </div>
         </div>
       </div>
+      <AnimatePresence>
+        {confirming && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="flex gap-2 px-3 pb-3">
+              <motion.button
+                onClick={() => setConfirming(false)}
+                whileTap={{ scale: 0.95 }}
+                className="flex-1 bg-surface border border-border rounded-lg py-2 text-text-muted font-body text-xs"
+              >
+                Cancel
+              </motion.button>
+              <motion.button
+                onClick={() => onDelete(meal.id)}
+                whileTap={{ scale: 0.95 }}
+                className="flex-1 bg-red-500/20 border border-red-500/30 rounded-lg py-2 text-red-400 font-body text-xs font-semibold"
+              >
+                Delete Meal
+              </motion.button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
@@ -116,6 +154,15 @@ export default function Meals() {
   const [uploading, setUploading] = useState(false);
 
   const savedList = Array.isArray(savedMeals) ? savedMeals : [];
+
+  const handleDeleteMeal = async (id: number) => {
+    try {
+      await api.deleteMeal(id);
+      refetch();
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const quickLogSaved = async (meal: any) => {
     try {
@@ -207,7 +254,7 @@ export default function Meals() {
         <div className="mt-4 space-y-3">
           <AnimatePresence>
             {mealsList.map((meal: any, i: number) => (
-              <MealCard key={meal.id} meal={meal} index={i} />
+              <MealCard key={meal.id} meal={meal} index={i} onDelete={handleDeleteMeal} />
             ))}
           </AnimatePresence>
 

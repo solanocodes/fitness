@@ -24,6 +24,8 @@ export const api = {
     request(`/api/meals${date ? `?date=${date}` : ''}`),
   addMeal: (formData: FormData) =>
     request('/api/meals', { method: 'POST', body: formData }),
+  deleteMeal: (id: number) =>
+    request(`/api/meals/${id}`, { method: 'DELETE' }),
 
   // Workouts
   getWorkouts: () => request('/api/workouts'),

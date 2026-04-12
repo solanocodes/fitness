@@ -108,6 +108,15 @@ app.get('/api/meals', async (req, res) => {
   }
 });
 
+app.delete('/api/meals/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM meals WHERE id = $1', [req.params.id]);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Workouts
 app.post('/api/workouts', async (req, res) => {
   try {
