@@ -26,8 +26,9 @@ export default function Dashboard() {
   const { data: dailyLog } = useApi(() => api.getDailyLog(), []);
 
   const score = scoreData || { score: 0, bf_score: 0, weight_score: 0, consistency_score: 0, workout_score: 0 };
-  const latestWeight = bodyStats?.[0]?.weight || 0;
-  const latestBf = bodyStats?.[0]?.bf_percent || 0;
+  const latestWeight = parseFloat(bodyStats?.[0]?.weight) || 0;
+  const latestBf = parseFloat(bodyStats?.[0]?.bf_percent) || 0;
+  const latestSmm = parseFloat(bodyStats?.[0]?.muscle_mass) || 0;
 
   const todayMacros = useMemo(() => {
     if (!meals || !Array.isArray(meals)) return { protein: 0, carbs: 0, fat: 0, calories: 0 };
@@ -91,8 +92,8 @@ export default function Dashboard() {
           {/* Stat Cards — 3 column asymmetric */}
           <div className="grid grid-cols-3 gap-3">
             <StatCard label="WEIGHT" value={latestWeight} unit="lbs" delay={1} radius="8px" />
-            <StatCard label="BODY FAT" value={latestBf} unit="%" delay={2} radius="16px" />
-            <StatCard label="PROTEIN" value={Math.round(todayMacros.protein)} unit="g" decimals={0} delay={3} radius="8px" />
+            <StatCard label="SMM" value={latestSmm} unit="lbs" delay={2} radius="16px" />
+            <StatCard label="BODY FAT" value={latestBf} unit="%" delay={3} radius="8px" />
           </div>
 
           {/* Water stat */}

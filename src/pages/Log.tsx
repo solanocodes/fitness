@@ -23,6 +23,7 @@ function LogOption({ icon: Icon, label, color, onClick }: { icon: any; label: st
 function WeightForm({ onClose }: { onClose: () => void }) {
   const [weight, setWeight] = useState('');
   const [bf, setBf] = useState('');
+  const [smm, setSmm] = useState('');
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -33,6 +34,7 @@ function WeightForm({ onClose }: { onClose: () => void }) {
       await api.addBodyStat({
         weight: parseFloat(weight),
         bf_percent: bf ? parseFloat(bf) : null,
+        muscle_mass: smm ? parseFloat(smm) : null,
       });
       setSuccess(true);
       setTimeout(onClose, 800);
@@ -58,6 +60,17 @@ function WeightForm({ onClose }: { onClose: () => void }) {
           onChange={(e) => setWeight(e.target.value)}
           className="w-full bg-surface border border-border rounded-lg px-4 py-3 text-text-primary font-bebas text-2xl focus:border-accent focus:outline-none"
           placeholder="185.0"
+        />
+      </div>
+      <div>
+        <label className="label-caps block mb-2">SKELETAL MUSCLE MASS (LBS)</label>
+        <input
+          type="number"
+          step="0.1"
+          value={smm}
+          onChange={(e) => setSmm(e.target.value)}
+          className="w-full bg-surface border border-border rounded-lg px-4 py-3 text-text-primary font-bebas text-2xl focus:border-accent focus:outline-none"
+          placeholder="82.5"
         />
       </div>
       <div>
