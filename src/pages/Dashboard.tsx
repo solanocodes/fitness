@@ -25,7 +25,7 @@ export default function Dashboard() {
   const { data: workouts } = useApi(() => api.getWorkouts(), []);
   const { data: dailyLog } = useApi(() => api.getDailyLog(), []);
 
-  const score = scoreData || { score: 0, bf_score: 0, weight_score: 0, consistency_score: 0, workout_score: 0 };
+  const score = scoreData || { score: 0, bf_score: 0, weight_score: 0, smm_score: 0, consistency_score: 0 };
   const latestWeight = parseFloat(bodyStats?.[0]?.weight) || 0;
   const latestBf = parseFloat(bodyStats?.[0]?.bf_percent) || 0;
   const latestSmm = parseFloat(bodyStats?.[0]?.muscle_mass) || 0;
@@ -83,8 +83,8 @@ export default function Dashboard() {
           score={score.score}
           bfScore={score.bf_score}
           weightScore={score.weight_score}
+          smmScore={score.smm_score}
           consistencyScore={score.consistency_score}
-          workoutScore={score.workout_score}
         />
 
         {/* Content below hero — editorial layout */}

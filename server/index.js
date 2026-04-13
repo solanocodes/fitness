@@ -250,7 +250,7 @@ app.get('/api/forge-score', async (req, res) => {
     res.json(score);
   } catch (err) {
     console.error('Forge score error:', err.message);
-    res.json({ score: 0, bf_score: 0, weight_score: 0, consistency_score: 0, workout_score: 0 });
+    res.json({ score: 0, bf_score: 0, weight_score: 0, smm_score: 0, consistency_score: 0 });
   }
 });
 

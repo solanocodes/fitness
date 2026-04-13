@@ -46,8 +46,8 @@ interface Props {
   score: number;
   bfScore: number;
   weightScore: number;
+  smmScore: number;
   consistencyScore: number;
-  workoutScore: number;
 }
 
 function ScoreArc({ score }: { score: number }) {
@@ -145,12 +145,12 @@ function Safe3DBackground() {
   }
 }
 
-export default function ForgeScoreHero({ score, bfScore, weightScore, consistencyScore, workoutScore }: Props) {
+export default function ForgeScoreHero({ score, bfScore, weightScore, smmScore, consistencyScore }: Props) {
   const s = Number(score) || 0;
   const bf = Number(bfScore) || 0;
   const w = Number(weightScore) || 0;
+  const sm = Number(smmScore) || 0;
   const c = Number(consistencyScore) || 0;
-  const wo = Number(workoutScore) || 0;
 
   return (
     <div className="relative w-full">
@@ -204,8 +204,8 @@ export default function ForgeScoreHero({ score, bfScore, weightScore, consistenc
         >
           <BreakdownBar label="BODY FAT" value={bf} color="#c8f135" />
           <BreakdownBar label="WEIGHT" value={w} color="#c8f135" />
+          <BreakdownBar label="MUSCLE" value={sm} color="#c8f135" />
           <BreakdownBar label="CONSISTENCY" value={c} color="#c8f135" />
-          <BreakdownBar label="WORKOUTS" value={wo} color="#c8f135" />
         </motion.div>
       </div>
     </div>

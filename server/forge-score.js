@@ -1,45 +1,57 @@
 import pool from './db.js';
 
+// Your personal goals
+const GOAL_WEIGHT = 180;       // lbs
+const GOAL_BF_PERCENT = 12;    // %
+const GOAL_SMM = 100;          // lbs skeletal muscle mass
+
 export async function calculateForgeScore() {
   const now = new Date();
-  const thirtyDaysAgo = new Date(now - 30 * 24 * 60 * 60 * 1000);
   const sevenDaysAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
 
-  // BF% trend score (40% weight) - lower is better, reward downward trend
-  let bfScore = 50;
+  // Body Fat % score (30%) — how close to 12% goal
+  // At goal = 100, each % away from goal = -8 points, floor at 0
+  let bfScore = 0;
   try {
     const bfRes = await pool.query(
-      'SELECT bf_percent FROM body_stats WHERE bf_percent IS NOT NULL ORDER BY created_at DESC LIMIT 5'
+      'SELECT bf_percent FROM body_stats WHERE bf_percent IS NOT NULL ORDER BY created_at DESC LIMIT 1'
     );
-    if (bfRes.rows.length >= 2) {
-      const latest = parseFloat(bfRes.rows[0].bf_percent);
-      const oldest = parseFloat(bfRes.rows[bfRes.rows.length - 1].bf_percent);
-      const diff = oldest - latest; // positive = improving
-      bfScore = Math.min(100, Math.max(0, 50 + diff * 10));
-    } else if (bfRes.rows.length === 1) {
+    if (bfRes.rows.length > 0) {
       const bf = parseFloat(bfRes.rows[0].bf_percent);
-      if (bf < 15) bfScore = 90;
-      else if (bf < 20) bfScore = 70;
-      else if (bf < 25) bfScore = 50;
-      else bfScore = 30;
+      const distance = Math.abs(bf - GOAL_BF_PERCENT);
+      bfScore = Math.max(0, Math.round(100 - distance * 8));
     }
   } catch (e) { /* use default */ }
 
-  // Weight trend score (25% weight) - reward consistency toward goal
-  let weightScore = 50;
+  // Weight score (25%) — how close to 180 lbs goal
+  // At goal = 100, each lb away = -3 points, floor at 0
+  let weightScore = 0;
   try {
     const wRes = await pool.query(
-      'SELECT weight FROM body_stats WHERE weight IS NOT NULL ORDER BY created_at DESC LIMIT 5'
+      'SELECT weight FROM body_stats WHERE weight IS NOT NULL ORDER BY created_at DESC LIMIT 1'
     );
-    if (wRes.rows.length >= 2) {
-      const latest = parseFloat(wRes.rows[0].weight);
-      const oldest = parseFloat(wRes.rows[wRes.rows.length - 1].weight);
-      const diff = oldest - latest;
-      weightScore = Math.min(100, Math.max(0, 50 + diff * 5));
+    if (wRes.rows.length > 0) {
+      const w = parseFloat(wRes.rows[0].weight);
+      const distance = Math.abs(w - GOAL_WEIGHT);
+      weightScore = Math.max(0, Math.round(100 - distance * 3));
     }
   } catch (e) { /* use default */ }
 
-  // Logging consistency score (20% weight) - days logged in last 7
+  // Skeletal Muscle Mass score (25%) — how close to 100 lbs goal
+  // At goal = 100, each lb away = -4 points, floor at 0
+  let smmScore = 0;
+  try {
+    const sRes = await pool.query(
+      'SELECT muscle_mass FROM body_stats WHERE muscle_mass IS NOT NULL ORDER BY created_at DESC LIMIT 1'
+    );
+    if (sRes.rows.length > 0) {
+      const smm = parseFloat(sRes.rows[0].muscle_mass);
+      const distance = Math.abs(smm - GOAL_SMM);
+      smmScore = Math.max(0, Math.round(100 - distance * 4));
+    }
+  } catch (e) { /* use default */ }
+
+  // Logging consistency score (20%) — days logged in last 7
   let consistencyScore = 0;
   try {
     const logRes = await pool.query(
@@ -47,30 +59,19 @@ export async function calculateForgeScore() {
       [sevenDaysAgo]
     );
     const days = parseInt(logRes.rows[0].days) || 0;
-    consistencyScore = Math.min(100, (days / 7) * 100);
-  } catch (e) { /* use default */ }
-
-  // Workout frequency score (15% weight) - workouts in last 7 days
-  let workoutScore = 0;
-  try {
-    const workRes = await pool.query(
-      'SELECT COUNT(*) as count FROM workouts WHERE created_at >= $1',
-      [sevenDaysAgo]
-    );
-    const count = parseInt(workRes.rows[0].count) || 0;
-    workoutScore = Math.min(100, (count / 5) * 100);
+    consistencyScore = Math.min(100, Math.round((days / 7) * 100));
   } catch (e) { /* use default */ }
 
   const score = Math.round(
-    bfScore * 0.4 + weightScore * 0.25 + consistencyScore * 0.2 + workoutScore * 0.15
+    bfScore * 0.30 + weightScore * 0.25 + smmScore * 0.25 + consistencyScore * 0.20
   );
 
   return {
     score: Math.min(100, Math.max(0, score)),
-    bf_score: Math.round(bfScore),
-    weight_score: Math.round(weightScore),
-    consistency_score: Math.round(consistencyScore),
-    workout_score: Math.round(workoutScore),
+    bf_score: bfScore,
+    weight_score: weightScore,
+    smm_score: smmScore,
+    consistency_score: consistencyScore,
   };
 }
 
@@ -111,7 +112,7 @@ export async function checkAchievements() {
       name: '5 Lbs Down',
       description: 'Lost 5 pounds from your starting weight',
       query: 'SELECT weight FROM body_stats WHERE weight IS NOT NULL ORDER BY created_at ASC LIMIT 1',
-      condition: (r) => false, // checked separately
+      condition: (r) => false,
     },
     {
       key: 'first_meal',
@@ -136,7 +137,6 @@ export async function checkAchievements() {
     },
   ];
 
-  // Check 5lbs lost separately
   try {
     const first = await pool.query('SELECT weight FROM body_stats WHERE weight IS NOT NULL ORDER BY created_at ASC LIMIT 1');
     const latest = await pool.query('SELECT weight FROM body_stats WHERE weight IS NOT NULL ORDER BY created_at DESC LIMIT 1');
