@@ -49,6 +49,8 @@ export const api = {
   getPhotos: () => request('/api/progress-photos'),
   addPhoto: (formData: FormData) =>
     request('/api/progress-photos', { method: 'POST', body: formData }),
+  deletePhoto: (id: number) =>
+    request(`/api/progress-photos/${id}`, { method: 'DELETE' }),
 
   // Daily Log
   getDailyLog: () => request('/api/daily-log/today'),

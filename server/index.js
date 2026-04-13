@@ -190,12 +190,22 @@ app.post('/api/progress-photos', upload.single('photo'), async (req, res) => {
       const uploaded = await uploadImage(req.file.buffer);
       photo_url = uploaded.secure_url;
     }
-    const { notes } = req.body;
+    const { notes, date } = req.body;
+    const created = date || new Date().toISOString();
     const result = await pool.query(
-      'INSERT INTO progress_photos (photo_url, notes) VALUES ($1,$2) RETURNING *',
-      [photo_url, notes]
+      'INSERT INTO progress_photos (photo_url, notes, created_at) VALUES ($1,$2,$3) RETURNING *',
+      [photo_url, notes, created]
     );
     res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/progress-photos/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM progress_photos WHERE id = $1', [req.params.id]);
+    res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
