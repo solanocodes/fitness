@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import PageTransition from '../components/PageTransition';
 import { api } from '../lib/api';
-import { HiOutlineScale, HiOutlineFire, HiOutlineBeaker } from 'react-icons/hi';
+import { HiOutlineScale, HiOutlineFire, HiOutlineBeaker, HiOutlineMoon } from 'react-icons/hi';
 
-type LogType = 'weight' | 'meal' | 'water' | null;
+type LogType = 'weight' | 'meal' | 'water' | 'sleep' | null;
 
 function LogOption({ icon: Icon, label, color, onClick }: { icon: any; label: string; color: string; onClick: () => void }) {
   return (
@@ -546,6 +546,97 @@ function WaterForm({ onClose }: { onClose: () => void }) {
   );
 }
 
+function SleepForm({ onClose }: { onClose: () => void }) {
+  const [hours, setHours] = useState('');
+  const [quality, setQuality] = useState(7);
+  const [saving, setSaving] = useState(false);
+  const [success, setSuccess] = useState(false);
+
+  const quickHours = [6, 6.5, 7, 7.5, 8, 8.5, 9];
+
+  const submit = async () => {
+    if (!hours) return;
+    setSaving(true);
+    try {
+      await api.addDailyLog({ sleep_hours: parseFloat(hours), sleep_quality: quality });
+      setSuccess(true);
+      setTimeout(onClose, 800);
+    } catch {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      className="space-y-4"
+    >
+      <h3 className="font-bebas text-3xl text-text-primary">LOG SLEEP</h3>
+      <div>
+        <label className="label-caps block mb-2">HOURS SLEPT</label>
+        <input
+          type="number"
+          step="0.5"
+          value={hours}
+          onChange={(e) => setHours(e.target.value)}
+          className="w-full bg-surface border border-border rounded-lg px-4 py-3 text-text-primary font-bebas text-2xl focus:border-accent focus:outline-none"
+          placeholder="7.5"
+        />
+        <div className="flex gap-2 mt-2 flex-wrap">
+          {quickHours.map((h) => (
+            <motion.button
+              key={h}
+              onClick={() => setHours(String(h))}
+              whileTap={{ scale: 0.95 }}
+              className={`px-3 py-2 rounded-lg border font-bebas text-lg ${
+                hours === String(h)
+                  ? 'bg-accent text-bg border-accent'
+                  : 'bg-surface border-border text-text-muted hover:border-accent/30'
+              }`}
+            >
+              {h}h
+            </motion.button>
+          ))}
+        </div>
+      </div>
+      <div>
+        <label className="label-caps block mb-2">SLEEP QUALITY ({quality}/10)</label>
+        <input
+          type="range"
+          min="1"
+          max="10"
+          value={quality}
+          onChange={(e) => setQuality(parseInt(e.target.value))}
+          className="w-full accent-accent"
+        />
+        <div className="flex justify-between text-text-muted text-xs font-body mt-1">
+          <span>Terrible</span>
+          <span>Amazing</span>
+        </div>
+      </div>
+      <div className="flex gap-3">
+        <motion.button
+          onClick={onClose}
+          whileTap={{ scale: 0.97 }}
+          className="flex-1 bg-surface border border-border rounded-lg py-3 text-text-muted font-body text-sm"
+        >
+          Cancel
+        </motion.button>
+        <motion.button
+          onClick={submit}
+          whileTap={{ scale: 0.97 }}
+          disabled={saving || !hours}
+          className="flex-1 bg-accent rounded-lg py-3 text-bg font-body text-sm font-semibold disabled:opacity-50"
+        >
+          {success ? 'Saved!' : saving ? 'Saving...' : 'Save'}
+        </motion.button>
+      </div>
+    </motion.div>
+  );
+}
+
 export default function Log() {
   const [active, setActive] = useState<LogType>(null);
 
@@ -581,13 +672,16 @@ export default function Log() {
               <LogOption icon={HiOutlineScale} label="WEIGHT" color="#c8f135" onClick={() => setActive('weight')} />
               <LogOption icon={HiOutlineFire} label="MEAL" color="#f59e0b" onClick={() => setActive('meal')} />
               <LogOption icon={HiOutlineBeaker} label="WATER" color="#06b6d4" onClick={() => setActive('water')} />
+              <LogOption icon={HiOutlineMoon} label="SLEEP" color="#8b5cf6" onClick={() => setActive('sleep')} />
             </motion.div>
           ) : active === 'weight' ? (
             <WeightForm key="weight" onClose={() => setActive(null)} />
           ) : active === 'meal' ? (
             <MealForm key="meal" onClose={() => setActive(null)} />
-          ) : (
+          ) : active === 'water' ? (
             <WaterForm key="water" onClose={() => setActive(null)} />
+          ) : (
+            <SleepForm key="sleep" onClose={() => setActive(null)} />
           )}
         </AnimatePresence>
       </div>

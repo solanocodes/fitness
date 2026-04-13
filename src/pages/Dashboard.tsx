@@ -65,6 +65,8 @@ export default function Dashboard() {
   }, [achievements]);
 
   const waterOz = dailyLog?.water_oz || 0;
+  const sleepHours = parseFloat(dailyLog?.sleep_hours) || 0;
+  const sleepQuality = parseInt(dailyLog?.sleep_quality) || 0;
 
   return (
     <PageTransition>
@@ -84,18 +86,31 @@ export default function Dashboard() {
             <StatCard label="BODY FAT" value={latestBf} unit="%" delay={3} radius="8px" />
           </div>
 
-          <motion.div
-            className="bg-card border border-border rounded-lg p-4 flex items-center justify-between"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.35 }}
-          >
-            <span className="label-caps">WATER TODAY</span>
-            <div>
+          <div className="grid grid-cols-2 gap-3">
+            <motion.div
+              className="bg-card border border-border rounded-lg p-4"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.35 }}
+            >
+              <span className="label-caps block mb-1">WATER TODAY</span>
               <span className="font-bebas text-text-primary text-3xl">{waterOz}</span>
               <span className="text-text-muted text-xs font-body ml-1">oz</span>
-            </div>
-          </motion.div>
+            </motion.div>
+            <motion.div
+              className="bg-card border border-border rounded-lg p-4"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              <span className="label-caps block mb-1">SLEEP</span>
+              <span className="font-bebas text-text-primary text-3xl">{sleepHours}</span>
+              <span className="text-text-muted text-xs font-body ml-1">hrs</span>
+              {sleepQuality > 0 && (
+                <span className="text-text-muted text-xs font-body ml-2">({sleepQuality}/10)</span>
+              )}
+            </motion.div>
+          </div>
 
           <MacroTracker
             protein={Math.round(todayMacros.protein)}

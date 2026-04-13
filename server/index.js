@@ -29,7 +29,9 @@ async function initDB() {
     CREATE TABLE IF NOT EXISTS workouts (id SERIAL PRIMARY KEY, type TEXT, duration_mins INTEGER, calories_burned INTEGER, rounds INTEGER, intensity INTEGER, avg_heart_rate INTEGER, start_time TIMESTAMPTZ, end_time TIMESTAMPTZ, source VARCHAR(20) DEFAULT 'manual', notes TEXT, created_at TIMESTAMPTZ DEFAULT NOW());
     CREATE TABLE IF NOT EXISTS inbody_results (id SERIAL PRIMARY KEY, weight NUMERIC(5,1), bf_percent NUMERIC(4,1), muscle_mass NUMERIC(5,1), visceral_fat NUMERIC(4,1), bmi NUMERIC(4,1), created_at TIMESTAMPTZ DEFAULT NOW());
     CREATE TABLE IF NOT EXISTS progress_photos (id SERIAL PRIMARY KEY, photo_url TEXT, notes TEXT, created_at TIMESTAMPTZ DEFAULT NOW());
-    CREATE TABLE IF NOT EXISTS daily_log (id SERIAL PRIMARY KEY, date DATE DEFAULT CURRENT_DATE, water_oz INTEGER DEFAULT 0, bloat_score INTEGER, notes TEXT, created_at TIMESTAMPTZ DEFAULT NOW());
+    CREATE TABLE IF NOT EXISTS daily_log (id SERIAL PRIMARY KEY, date DATE DEFAULT CURRENT_DATE, water_oz INTEGER DEFAULT 0, sleep_hours NUMERIC(3,1), sleep_quality INTEGER, bloat_score INTEGER, notes TEXT, created_at TIMESTAMPTZ DEFAULT NOW());
+    ALTER TABLE daily_log ADD COLUMN IF NOT EXISTS sleep_hours NUMERIC(3,1);
+    ALTER TABLE daily_log ADD COLUMN IF NOT EXISTS sleep_quality INTEGER;
     CREATE TABLE IF NOT EXISTS achievements (id SERIAL PRIMARY KEY, key TEXT UNIQUE, name TEXT, description TEXT, earned_at TIMESTAMPTZ DEFAULT NOW());
     CREATE TABLE IF NOT EXISTS forge_score_snapshots (id SERIAL PRIMARY KEY, score NUMERIC(5,1), bf_score NUMERIC(5,1), weight_score NUMERIC(5,1), consistency_score NUMERIC(5,1), workout_score NUMERIC(5,1), created_at TIMESTAMPTZ DEFAULT NOW());
     CREATE TABLE IF NOT EXISTS saved_meals (id SERIAL PRIMARY KEY, meal_name TEXT NOT NULL, protein NUMERIC(5,1), carbs NUMERIC(5,1), fat NUMERIC(5,1), calories INTEGER, created_at TIMESTAMPTZ DEFAULT NOW());
@@ -211,20 +213,20 @@ app.get('/api/progress-photos', async (req, res) => {
 // Daily Log
 app.post('/api/daily-log', async (req, res) => {
   try {
-    const { water_oz, bloat_score, notes } = req.body;
+    const { water_oz, sleep_hours, sleep_quality, bloat_score, notes } = req.body;
     // Upsert for today
     const existing = await pool.query('SELECT id, water_oz FROM daily_log WHERE date = CURRENT_DATE LIMIT 1');
     let result;
     if (existing.rows.length > 0) {
       const newWater = (parseInt(existing.rows[0].water_oz) || 0) + (parseInt(water_oz) || 0);
       result = await pool.query(
-        'UPDATE daily_log SET water_oz = $1, bloat_score = COALESCE($2, bloat_score), notes = COALESCE($3, notes) WHERE date = CURRENT_DATE RETURNING *',
-        [newWater, bloat_score, notes]
+        'UPDATE daily_log SET water_oz = $1, sleep_hours = COALESCE($2, sleep_hours), sleep_quality = COALESCE($3, sleep_quality), bloat_score = COALESCE($4, bloat_score), notes = COALESCE($5, notes) WHERE date = CURRENT_DATE RETURNING *',
+        [newWater, sleep_hours, sleep_quality, bloat_score, notes]
       );
     } else {
       result = await pool.query(
-        'INSERT INTO daily_log (water_oz, bloat_score, notes) VALUES ($1,$2,$3) RETURNING *',
-        [water_oz || 0, bloat_score, notes]
+        'INSERT INTO daily_log (water_oz, sleep_hours, sleep_quality, bloat_score, notes) VALUES ($1,$2,$3,$4,$5) RETURNING *',
+        [water_oz || 0, sleep_hours, sleep_quality, bloat_score, notes]
       );
     }
     checkAchievements().catch(() => {});
