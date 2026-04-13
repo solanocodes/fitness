@@ -22,7 +22,6 @@ export default function Dashboard() {
   const { data: bodyStats } = useApi(() => api.getBodyStats(), []);
   const { data: meals } = useApi(() => api.getMeals(new Date().toISOString().split('T')[0]), []);
   const { data: achievements } = useApi(() => api.getAchievements(), []);
-  const { data: workouts } = useApi(() => api.getWorkouts(), []);
   const { data: dailyLog } = useApi(() => api.getDailyLog(), []);
 
   const score = scoreData || { score: 0, bf_score: 0, weight_score: 0, smm_score: 0, consistency_score: 0 };
@@ -43,7 +42,6 @@ export default function Dashboard() {
     );
   }, [meals]);
 
-  // Calculate streaks
   const logStreak = useMemo(() => {
     if (!bodyStats || !Array.isArray(bodyStats)) return 0;
     let streak = 0;
@@ -61,13 +59,6 @@ export default function Dashboard() {
     return streak;
   }, [bodyStats]);
 
-  const workoutStreak = useMemo(() => {
-    if (!workouts || !Array.isArray(workouts)) return 0;
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    return workouts.filter((w: any) => new Date(w.created_at) >= sevenDaysAgo).length;
-  }, [workouts]);
-
   const earnedKeys = useMemo(() => {
     if (!achievements || !Array.isArray(achievements)) return [];
     return achievements.map((a: any) => a.key);
@@ -78,7 +69,6 @@ export default function Dashboard() {
   return (
     <PageTransition>
       <motion.div variants={stagger} initial="initial" animate="animate">
-        {/* Forge Score Hero */}
         <ForgeScoreHero
           score={score.score}
           bfScore={score.bf_score}
@@ -87,16 +77,13 @@ export default function Dashboard() {
           consistencyScore={score.consistency_score}
         />
 
-        {/* Content below hero — editorial layout */}
         <div className="px-4 space-y-5 mt-2">
-          {/* Stat Cards — 3 column asymmetric */}
           <div className="grid grid-cols-3 gap-3">
             <StatCard label="WEIGHT" value={latestWeight} unit="lbs" delay={1} radius="8px" />
             <StatCard label="SMM" value={latestSmm} unit="lbs" delay={2} radius="16px" />
             <StatCard label="BODY FAT" value={latestBf} unit="%" delay={3} radius="8px" />
           </div>
 
-          {/* Water stat */}
           <motion.div
             className="bg-card border border-border rounded-lg p-4 flex items-center justify-between"
             initial={{ opacity: 0, y: 20 }}
@@ -110,7 +97,6 @@ export default function Dashboard() {
             </div>
           </motion.div>
 
-          {/* Macros */}
           <MacroTracker
             protein={Math.round(todayMacros.protein)}
             carbs={Math.round(todayMacros.carbs)}
@@ -118,7 +104,6 @@ export default function Dashboard() {
             calories={todayMacros.calories}
           />
 
-          {/* Streaks */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -128,12 +113,10 @@ export default function Dashboard() {
             <StreakPills
               streaks={[
                 { icon: 'fire', count: logStreak, label: 'DAY LOG STREAK' },
-                { icon: 'lightning', count: workoutStreak, label: 'WORKOUTS THIS WEEK' },
               ]}
             />
           </motion.div>
 
-          {/* Achievements */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import PageTransition from '../components/PageTransition';
 import { api } from '../lib/api';
-import { HiOutlineScale, HiOutlineFire, HiOutlineLightningBolt, HiOutlineBeaker } from 'react-icons/hi';
+import { HiOutlineScale, HiOutlineFire, HiOutlineBeaker } from 'react-icons/hi';
 
-type LogType = 'weight' | 'meal' | 'workout' | 'water' | null;
+type LogType = 'weight' | 'meal' | 'water' | null;
 
 function LogOption({ icon: Icon, label, color, onClick }: { icon: any; label: string; color: string; onClick: () => void }) {
   return (
@@ -96,132 +96,6 @@ function WeightForm({ onClose }: { onClose: () => void }) {
           onClick={submit}
           whileTap={{ scale: 0.97 }}
           disabled={saving || !weight}
-          className="flex-1 bg-accent rounded-lg py-3 text-bg font-body text-sm font-semibold disabled:opacity-50"
-        >
-          {success ? 'Saved!' : saving ? 'Saving...' : 'Save'}
-        </motion.button>
-      </div>
-    </motion.div>
-  );
-}
-
-function WorkoutForm({ onClose }: { onClose: () => void }) {
-  const [type, setType] = useState('boxing');
-  const [duration, setDuration] = useState('');
-  const [calories, setCalories] = useState('');
-  const [rounds, setRounds] = useState('');
-  const [intensity, setIntensity] = useState(5);
-  const [saving, setSaving] = useState(false);
-  const [success, setSuccess] = useState(false);
-
-  const types = ['boxing', 'weights', 'cardio', 'hiit', 'yoga', 'running', 'cycling', 'swimming', 'other'];
-
-  const submit = async () => {
-    if (!duration) return;
-    setSaving(true);
-    try {
-      await api.addWorkout({
-        type,
-        duration_mins: parseInt(duration),
-        calories_burned: calories ? parseInt(calories) : null,
-        rounds: rounds ? parseInt(rounds) : null,
-        intensity,
-      });
-      setSuccess(true);
-      setTimeout(onClose, 800);
-    } catch {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      className="space-y-4"
-    >
-      <h3 className="font-bebas text-3xl text-text-primary">LOG WORKOUT</h3>
-      <div>
-        <label className="label-caps block mb-2">TYPE</label>
-        <div className="flex flex-wrap gap-2">
-          {types.map((t) => (
-            <motion.button
-              key={t}
-              onClick={() => setType(t)}
-              whileTap={{ scale: 0.95 }}
-              className={`px-3 py-1.5 rounded-lg border text-xs font-body uppercase tracking-wider ${
-                type === t
-                  ? 'bg-accent text-bg border-accent font-semibold'
-                  : 'bg-surface border-border text-text-muted'
-              }`}
-            >
-              {t}
-            </motion.button>
-          ))}
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="label-caps block mb-2">DURATION (MIN)</label>
-          <input
-            type="number"
-            value={duration}
-            onChange={(e) => setDuration(e.target.value)}
-            className="w-full bg-surface border border-border rounded-lg px-4 py-3 text-text-primary font-bebas text-2xl focus:border-accent focus:outline-none"
-            placeholder="45"
-          />
-        </div>
-        <div>
-          <label className="label-caps block mb-2">CALORIES</label>
-          <input
-            type="number"
-            value={calories}
-            onChange={(e) => setCalories(e.target.value)}
-            className="w-full bg-surface border border-border rounded-lg px-4 py-3 text-text-primary font-bebas text-2xl focus:border-accent focus:outline-none"
-            placeholder="350"
-          />
-        </div>
-      </div>
-      {type === 'boxing' && (
-        <div>
-          <label className="label-caps block mb-2">ROUNDS</label>
-          <input
-            type="number"
-            value={rounds}
-            onChange={(e) => setRounds(e.target.value)}
-            className="w-full bg-surface border border-border rounded-lg px-4 py-3 text-text-primary font-bebas text-2xl focus:border-accent focus:outline-none"
-            placeholder="12"
-          />
-        </div>
-      )}
-      <div>
-        <label className="label-caps block mb-2">INTENSITY ({intensity}/10)</label>
-        <input
-          type="range"
-          min="1"
-          max="10"
-          value={intensity}
-          onChange={(e) => setIntensity(parseInt(e.target.value))}
-          className="w-full accent-accent"
-        />
-        <div className="flex justify-between text-text-muted text-xs font-body mt-1">
-          <span>Easy</span>
-          <span>Maximum</span>
-        </div>
-      </div>
-      <div className="flex gap-3">
-        <motion.button
-          onClick={onClose}
-          whileTap={{ scale: 0.97 }}
-          className="flex-1 bg-surface border border-border rounded-lg py-3 text-text-muted font-body text-sm"
-        >
-          Cancel
-        </motion.button>
-        <motion.button
-          onClick={submit}
-          whileTap={{ scale: 0.97 }}
-          disabled={saving || !duration}
           className="flex-1 bg-accent rounded-lg py-3 text-bg font-body text-sm font-semibold disabled:opacity-50"
         >
           {success ? 'Saved!' : saving ? 'Saving...' : 'Save'}
@@ -706,15 +580,12 @@ export default function Log() {
             >
               <LogOption icon={HiOutlineScale} label="WEIGHT" color="#c8f135" onClick={() => setActive('weight')} />
               <LogOption icon={HiOutlineFire} label="MEAL" color="#f59e0b" onClick={() => setActive('meal')} />
-              <LogOption icon={HiOutlineLightningBolt} label="WORKOUT" color="#3b82f6" onClick={() => setActive('workout')} />
               <LogOption icon={HiOutlineBeaker} label="WATER" color="#06b6d4" onClick={() => setActive('water')} />
             </motion.div>
           ) : active === 'weight' ? (
             <WeightForm key="weight" onClose={() => setActive(null)} />
           ) : active === 'meal' ? (
             <MealForm key="meal" onClose={() => setActive(null)} />
-          ) : active === 'workout' ? (
-            <WorkoutForm key="workout" onClose={() => setActive(null)} />
           ) : (
             <WaterForm key="water" onClose={() => setActive(null)} />
           )}

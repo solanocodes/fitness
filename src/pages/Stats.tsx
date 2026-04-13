@@ -11,7 +11,7 @@ import {
   Tooltip,
   Filler,
 } from 'chart.js';
-import { Line, Bar } from 'react-chartjs-2';
+import { Line } from 'react-chartjs-2';
 import PageTransition from '../components/PageTransition';
 import { api } from '../lib/api';
 import { useApi } from '../hooks/useApi';
@@ -76,12 +76,10 @@ function ChartCard({ title, children, delay = 0 }: { title: string; children: Re
 
 export default function Stats() {
   const { data: bodyStats } = useApi(() => api.getBodyStats(), []);
-  const { data: workouts } = useApi(() => api.getWorkouts(), []);
   const { data: scoreHistory } = useApi(() => api.getForgeScoreHistory(), []);
   const { data: inbody } = useApi(() => api.getInBody(), []);
 
   const stats = Array.isArray(bodyStats) ? [...bodyStats].reverse() : [];
-  const workoutsList = Array.isArray(workouts) ? workouts : [];
   const scoresList = Array.isArray(scoreHistory) ? [...scoreHistory].reverse() : [];
   const inbodyList = Array.isArray(inbody) ? inbody : [];
 
@@ -110,28 +108,6 @@ export default function Stats() {
       borderWidth: 2,
     }],
   }), [stats]);
-
-  // Weekly workout frequency
-  const workoutFreqData = useMemo(() => {
-    const weeks: Record<string, number> = {};
-    workoutsList.forEach((w: any) => {
-      const d = new Date(w.created_at);
-      const weekStart = new Date(d);
-      weekStart.setDate(d.getDate() - d.getDay());
-      const key = weekStart.toLocaleDateString([], { month: 'short', day: 'numeric' });
-      weeks[key] = (weeks[key] || 0) + 1;
-    });
-    const labels = Object.keys(weeks).slice(-8);
-    return {
-      labels,
-      datasets: [{
-        data: labels.map((l) => weeks[l]),
-        backgroundColor: 'rgba(200,241,53,0.6)',
-        borderRadius: 4,
-        borderSkipped: false,
-      }],
-    };
-  }, [workoutsList]);
 
   const forgeScoreData = useMemo(() => ({
     labels: scoresList.map((s: any) =>
@@ -181,16 +157,6 @@ export default function Stats() {
           ) : (
             <div className="flex items-center justify-center h-full text-text-muted text-sm font-body">
               No body fat data yet
-            </div>
-          )}
-        </ChartCard>
-
-        <ChartCard title="WEEKLY WORKOUT FREQUENCY" delay={0.35}>
-          {workoutsList.length > 0 ? (
-            <Bar data={workoutFreqData} options={chartOptions as any} />
-          ) : (
-            <div className="flex items-center justify-center h-full text-text-muted text-sm font-body">
-              No workout data yet
             </div>
           )}
         </ChartCard>
