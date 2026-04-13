@@ -1,4 +1,4 @@
-import { useRef, useMemo } from 'react';
+import { useRef, useMemo, useState } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { motion } from 'framer-motion';
 import * as THREE from 'three';
@@ -130,15 +130,33 @@ function CountUp({ target }: { target: number }) {
   return <span ref={ref}>{target}</span>;
 }
 
+function Safe3DBackground() {
+  const [failed, setFailed] = useState(false);
+  if (failed) return null;
+  try {
+    return (
+      <Canvas camera={{ position: [0, 0, 5], fov: 50 }} onError={() => setFailed(true)}>
+        <ambientLight intensity={0.5} />
+        <MorphingMesh />
+      </Canvas>
+    );
+  } catch {
+    return null;
+  }
+}
+
 export default function ForgeScoreHero({ score, bfScore, weightScore, consistencyScore, workoutScore }: Props) {
+  const s = Number(score) || 0;
+  const bf = Number(bfScore) || 0;
+  const w = Number(weightScore) || 0;
+  const c = Number(consistencyScore) || 0;
+  const wo = Number(workoutScore) || 0;
+
   return (
     <div className="relative w-full">
       {/* 3D Background — covers only the score area */}
       <div className="absolute inset-0 h-[280px]">
-        <Canvas camera={{ position: [0, 0, 5], fov: 50 }}>
-          <ambientLight intensity={0.5} />
-          <MorphingMesh />
-        </Canvas>
+        <Safe3DBackground />
       </div>
 
       {/* Spotlight gradient overlay */}
@@ -165,7 +183,7 @@ export default function ForgeScoreHero({ score, bfScore, weightScore, consistenc
         </motion.span>
 
         <div className="relative flex items-center justify-center" style={{ width: 220, height: 220 }}>
-          <ScoreArc score={score} />
+          <ScoreArc score={s} />
           <motion.span
             className="font-bebas text-accent text-glow-lime"
             style={{ fontSize: '100px', lineHeight: 1 }}
@@ -173,7 +191,7 @@ export default function ForgeScoreHero({ score, bfScore, weightScore, consistenc
             animate={{ opacity: 1, scale: 1 }}
             transition={{ type: 'spring', stiffness: 100, damping: 15, delay: 0.2 }}
           >
-            {score}
+            {s}
           </motion.span>
         </div>
 
@@ -184,10 +202,10 @@ export default function ForgeScoreHero({ score, bfScore, weightScore, consistenc
           animate={{ opacity: 1 }}
           transition={{ delay: 0.6 }}
         >
-          <BreakdownBar label="BODY FAT" value={bfScore} color="#c8f135" />
-          <BreakdownBar label="WEIGHT" value={weightScore} color="#c8f135" />
-          <BreakdownBar label="CONSISTENCY" value={consistencyScore} color="#c8f135" />
-          <BreakdownBar label="WORKOUTS" value={workoutScore} color="#c8f135" />
+          <BreakdownBar label="BODY FAT" value={bf} color="#c8f135" />
+          <BreakdownBar label="WEIGHT" value={w} color="#c8f135" />
+          <BreakdownBar label="CONSISTENCY" value={c} color="#c8f135" />
+          <BreakdownBar label="WORKOUTS" value={wo} color="#c8f135" />
         </motion.div>
       </div>
     </div>
