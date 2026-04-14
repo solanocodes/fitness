@@ -53,13 +53,18 @@ export const api = {
     request(`/api/progress-photos/${id}`, { method: 'DELETE' }),
 
   // Daily Log
-  getDailyLog: () => request('/api/daily-log/today'),
-  addDailyLog: (data: any) =>
-    request('/api/daily-log', {
+  getDailyLog: () => {
+    const localDate = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+    return request(`/api/daily-log/today?date=${localDate}`);
+  },
+  addDailyLog: (data: any) => {
+    const localDate = new Date().toLocaleDateString('en-CA');
+    return request('/api/daily-log', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    }),
+      body: JSON.stringify({ ...data, date: localDate }),
+    });
+  },
 
   // Forge Score
   getForgeScore: () => request('/api/forge-score'),

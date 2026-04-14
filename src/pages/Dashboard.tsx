@@ -20,7 +20,7 @@ const stagger = {
 export default function Dashboard() {
   const { data: scoreData } = useApi(() => api.getForgeScore(), []);
   const { data: bodyStats } = useApi(() => api.getBodyStats(), []);
-  const { data: meals } = useApi(() => api.getMeals(new Date().toISOString().split('T')[0]), []);
+  const { data: meals } = useApi(() => api.getMeals(new Date().toLocaleDateString('en-CA')), []);
   const { data: achievements } = useApi(() => api.getAchievements(), []);
   const { data: dailyLog } = useApi(() => api.getDailyLog(), []);
 

@@ -147,7 +147,7 @@ function SavedMealCard({ meal, onQuickLog }: { meal: any; onQuickLog: (meal: any
 }
 
 export default function Meals() {
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date().toLocaleDateString('en-CA');
   const { data: meals, refetch } = useApi(() => api.getMeals(today), []);
   const { data: savedMeals } = useApi(() => api.getSavedMeals(), []);
   const fileRef = useRef<HTMLInputElement>(null);

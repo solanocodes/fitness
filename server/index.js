@@ -223,20 +223,21 @@ app.get('/api/progress-photos', async (req, res) => {
 // Daily Log
 app.post('/api/daily-log', async (req, res) => {
   try {
-    const { water_oz, sleep_hours, sleep_quality, bloat_score, notes } = req.body;
-    // Upsert for today
-    const existing = await pool.query('SELECT id, water_oz FROM daily_log WHERE date = CURRENT_DATE LIMIT 1');
+    const { water_oz, sleep_hours, sleep_quality, bloat_score, notes, date } = req.body;
+    const targetDate = date || new Date().toISOString().split('T')[0];
+    // Upsert for target date
+    const existing = await pool.query('SELECT id, water_oz FROM daily_log WHERE date = $1 LIMIT 1', [targetDate]);
     let result;
     if (existing.rows.length > 0) {
       const newWater = (parseInt(existing.rows[0].water_oz) || 0) + (parseInt(water_oz) || 0);
       result = await pool.query(
-        'UPDATE daily_log SET water_oz = $1, sleep_hours = COALESCE($2, sleep_hours), sleep_quality = COALESCE($3, sleep_quality), bloat_score = COALESCE($4, bloat_score), notes = COALESCE($5, notes) WHERE date = CURRENT_DATE RETURNING *',
-        [newWater, sleep_hours, sleep_quality, bloat_score, notes]
+        'UPDATE daily_log SET water_oz = $1, sleep_hours = COALESCE($2, sleep_hours), sleep_quality = COALESCE($3, sleep_quality), bloat_score = COALESCE($4, bloat_score), notes = COALESCE($5, notes) WHERE date = $6 RETURNING *',
+        [newWater, sleep_hours, sleep_quality, bloat_score, notes, targetDate]
       );
     } else {
       result = await pool.query(
-        'INSERT INTO daily_log (water_oz, sleep_hours, sleep_quality, bloat_score, notes) VALUES ($1,$2,$3,$4,$5) RETURNING *',
-        [water_oz || 0, sleep_hours, sleep_quality, bloat_score, notes]
+        'INSERT INTO daily_log (date, water_oz, sleep_hours, sleep_quality, bloat_score, notes) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
+        [targetDate, water_oz || 0, sleep_hours, sleep_quality, bloat_score, notes]
       );
     }
     checkAchievements().catch(() => {});
@@ -248,8 +249,10 @@ app.post('/api/daily-log', async (req, res) => {
 
 app.get('/api/daily-log/today', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM daily_log WHERE date = CURRENT_DATE LIMIT 1');
-    res.json(result.rows[0] || { water_oz: 0, bloat_score: null });
+    const { date } = req.query;
+    const targetDate = date || new Date().toISOString().split('T')[0];
+    const result = await pool.query('SELECT * FROM daily_log WHERE date = $1 LIMIT 1', [targetDate]);
+    res.json(result.rows[0] || { water_oz: 0, sleep_hours: null, sleep_quality: null, bloat_score: null });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
