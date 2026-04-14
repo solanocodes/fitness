@@ -173,6 +173,7 @@ export default function Meals() {
       fd.append('fat', String(meal.fat));
       fd.append('calories', String(meal.calories));
       fd.append('confidence', 'saved');
+      fd.append('local_date', new Date().toLocaleDateString('en-CA'));
       await api.addMeal(fd);
       refetch();
     } catch (err) {
@@ -202,6 +203,7 @@ export default function Meals() {
       fd.append('fat', String(analysis.fat_g || 0));
       fd.append('calories', String(analysis.calories || 0));
       fd.append('confidence', analysis.confidence || 'low');
+      fd.append('local_date', new Date().toLocaleDateString('en-CA'));
       await api.addMeal(fd);
       refetch();
     } catch (err) {

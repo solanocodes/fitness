@@ -226,6 +226,7 @@ function MealForm({ onClose }: { onClose: () => void }) {
       fd.append('fat', String(mealData.fat));
       fd.append('calories', String(mealData.calories));
       fd.append('confidence', mealData.confidence);
+      fd.append('local_date', new Date().toLocaleDateString('en-CA'));
       await api.addMeal(fd);
       setLastMeal(mealData);
       setSuccess(true);

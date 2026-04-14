@@ -82,10 +82,11 @@ app.post('/api/meals', upload.single('photo'), async (req, res) => {
       const uploaded = await uploadImage(req.file.buffer);
       photo_url = uploaded.secure_url;
     }
-    const { meal_name, protein, carbs, fat, calories, confidence, notes } = req.body;
+    const { meal_name, protein, carbs, fat, calories, confidence, notes, local_date } = req.body;
+    const created = local_date ? new Date(local_date + 'T12:00:00').toISOString() : new Date().toISOString();
     const result = await pool.query(
-      'INSERT INTO meals (photo_url, meal_name, protein, carbs, fat, calories, confidence, notes) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *',
-      [photo_url, meal_name, protein, carbs, fat, calories, confidence || 'medium', notes]
+      'INSERT INTO meals (photo_url, meal_name, protein, carbs, fat, calories, confidence, notes, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *',
+      [photo_url, meal_name, protein, carbs, fat, calories, confidence || 'medium', notes, created]
     );
     checkAchievements().catch(() => {});
     res.json(result.rows[0]);
@@ -100,7 +101,7 @@ app.get('/api/meals', async (req, res) => {
     let query = 'SELECT * FROM meals ORDER BY created_at DESC LIMIT 100';
     let params = [];
     if (date) {
-      query = 'SELECT * FROM meals WHERE DATE(created_at) = $1 ORDER BY created_at DESC';
+      query = 'SELECT * FROM meals WHERE created_at >= $1::date AND created_at < ($1::date + interval \'1 day\') ORDER BY created_at DESC';
       params = [date];
     }
     const result = await pool.query(query, params);
